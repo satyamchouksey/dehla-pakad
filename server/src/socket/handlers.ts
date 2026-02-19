@@ -10,11 +10,12 @@ import { verifyJWT } from '../auth/google';
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
-function getGoogleId(socket: TypedSocket): string | null {
+function getGoogleInfo(socket: TypedSocket): { googleId: string; name: string } | null {
   const token = socket.handshake.auth?.token;
   if (!token) return null;
   const payload = verifyJWT(token);
-  return payload?.googleId || null;
+  if (!payload?.googleId) return null;
+  return { googleId: payload.googleId, name: payload.name || 'Player' };
 }
 
 // Track voice chat participants per room: roomCode -> Set<socketId>
@@ -25,13 +26,14 @@ export function registerSocketHandlers(
   roomManager: RoomManager
 ): void {
   io.on('connection', (socket: TypedSocket) => {
-    const googleId = getGoogleId(socket);
-    if (!googleId) {
+    const userInfo = getGoogleInfo(socket);
+    if (!userInfo) {
       console.log(`[Socket] Unauthenticated connection rejected: ${socket.id}`);
       socket.emit('game:error', { message: 'Authentication required. Please sign in.' });
       socket.disconnect();
       return;
     }
+    const { googleId, name: googleName } = userInfo;
     console.log(`[Socket] Connected: ${socket.id} (user: ${googleId})`);
 
     socket.on('room:create', ({ playerName, avatar }) => {
@@ -126,27 +128,18 @@ export function registerSocketHandlers(
         return;
       }
 
-      // Broadcast the card played to all players
-      const playedCard = room.engine.getState().currentTrick.slice(-1)[0]?.card;
-      if (!result.trickComplete && playedCard) {
-        io.to(roomCode).emit('game:cardPlayed', {
-          playerIndex: seatIndex,
-          card: playedCard,
-        });
-      }
-
       if (result.trickComplete && result.trickCards) {
-        // Broadcast trick result
+        // 4th card played - trick complete
         const winnerName = room.players[result.trickWinner!]?.name || 'Unknown';
 
-        // First send the last card played
+        // Send the last card played
         const lastCard = result.trickCards[result.trickCards.length - 1];
         io.to(roomCode).emit('game:cardPlayed', {
           playerIndex: lastCard.playerIndex,
           card: lastCard.card,
         });
 
-        // Then send trick won after a delay (client handles animation timing)
+        // Send trick won (client will display all 4 cards)
         io.to(roomCode).emit('game:trickWon', {
           winnerIndex: result.trickWinner!,
           winnerName,
@@ -154,27 +147,43 @@ export function registerSocketHandlers(
           capturedTens: room.engine.getState().capturedTens,
         });
 
-        if (result.roundComplete) {
-          const state = room.engine.getState();
-          io.to(roomCode).emit('game:roundEnd', {
-            capturedTens: state.capturedTens,
-            tricksWon: state.tricksWon,
-            matchScores: state.matchScores,
-            roundWinner: result.roundWinner || null,
-            isKot: result.isKot || false,
-          });
+        // Delay state broadcast so clients see all 4 cards for ~2 seconds
+        const capturedResult = result;
+        setTimeout(() => {
+          const delayedRoom = roomManager.getRoom(roomCode);
+          if (!delayedRoom || !delayedRoom.engine) return;
 
-          if (result.matchComplete && result.matchWinner) {
-            io.to(roomCode).emit('game:matchEnd', {
-              winner: result.matchWinner,
+          if (capturedResult.roundComplete) {
+            const state = delayedRoom.engine.getState();
+            io.to(roomCode).emit('game:roundEnd', {
+              capturedTens: state.capturedTens,
+              tricksWon: state.tricksWon,
               matchScores: state.matchScores,
+              roundWinner: capturedResult.roundWinner || null,
+              isKot: capturedResult.isKot || false,
             });
-          }
-        }
-      }
 
-      // Send updated game state to each player
-      broadcastGameState(io, room, roomManager);
+            if (capturedResult.matchComplete && capturedResult.matchWinner) {
+              io.to(roomCode).emit('game:matchEnd', {
+                winner: capturedResult.matchWinner,
+                matchScores: state.matchScores,
+              });
+            }
+          }
+
+          broadcastGameState(io, delayedRoom, roomManager);
+        }, 2500);
+      } else {
+        // Normal card play (not trick complete)
+        const playedCard = room.engine.getState().currentTrick.slice(-1)[0]?.card;
+        if (playedCard) {
+          io.to(roomCode).emit('game:cardPlayed', {
+            playerIndex: seatIndex,
+            card: playedCard,
+          });
+        }
+        broadcastGameState(io, room, roomManager);
+      }
     });
 
     socket.on('game:newRound', () => {
@@ -196,6 +205,26 @@ export function registerSocketHandlers(
       const result = roomManager.handleReconnect(roomCode, googleId, socket.id);
 
       if ('error' in result) {
+        // Fallback: if room is in waiting state, try joining as new player
+        const existingRoom = roomManager.getRoom(roomCode);
+        if (existingRoom && !existingRoom.engine && existingRoom.players.length < 4) {
+          const joinResult = roomManager.joinRoom(roomCode, socket.id, googleId, googleName, 0);
+          if (!('error' in joinResult)) {
+            const { room: joinedRoom, seatIndex: joinedSeat } = joinResult;
+            socket.join(joinedRoom.code);
+            socket.emit('room:joined', {
+              roomCode: joinedRoom.code,
+              seatIndex: joinedSeat,
+              players: joinedRoom.players,
+            });
+            socket.to(joinedRoom.code).emit('room:playerJoined', {
+              player: joinedRoom.players[joinedSeat],
+              players: joinedRoom.players,
+            });
+            console.log(`[Socket] ${googleName} joined ${joinedRoom.code} via link at seat ${joinedSeat}`);
+            return;
+          }
+        }
         socket.emit('game:error', { message: result.error });
         return;
       }
@@ -208,7 +237,12 @@ export function registerSocketHandlers(
         gameState = room.engine.getClientState(seatIndex);
       }
 
-      socket.emit('player:reconnected', { playerIndex: seatIndex, gameState });
+      socket.emit('player:reconnected', {
+        playerIndex: seatIndex,
+        gameState,
+        roomCode: room.code,
+        players: room.players,
+      });
       socket.to(room.code).emit('room:playerJoined', {
         player: room.players[seatIndex],
         players: room.players,

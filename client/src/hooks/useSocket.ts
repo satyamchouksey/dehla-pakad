@@ -62,12 +62,24 @@ export function useSocket() {
     const onCardPlayed = (data: any) => {
       const s = useGameStore.getState();
       s.setLastPlayedCard(data);
+
+      // Highlight when trump is played on a non-trump lead
+      if (s.trumpSuit && data.card?.suit === s.trumpSuit && s.leadSuit && s.leadSuit !== s.trumpSuit) {
+        const symbols: Record<string, string> = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+        s.addNotification(`Trump ${symbols[data.card.suit] || ''} played!`, 'warning');
+      }
+
       setTimeout(() => useGameStore.getState().setLastPlayedCard(null), 600);
     };
 
     const onTrickWon = (data: any) => {
       const s = useGameStore.getState();
-      s.setAnimatingTrick(true);
+
+      // Show all 4 cards in the trick area for 2 seconds
+      if (data.cards && data.cards.length > 0) {
+        useGameStore.setState({ currentTrick: data.cards });
+      }
+
       const currentSeat = s.mySeatIndex;
       const winnerTeam = data.winnerIndex % 2 === currentSeat % 2 ? 'your' : 'the opposing';
       s.addNotification(
@@ -81,7 +93,12 @@ export function useSocket() {
           s.addNotification('A Dehla (10) was captured!', 'warning');
         }
       }
-      setTimeout(() => useGameStore.getState().setAnimatingTrick(false), 800);
+
+      // After 2s of viewing, animate the trick collection
+      setTimeout(() => {
+        useGameStore.getState().setAnimatingTrick(true);
+        setTimeout(() => useGameStore.getState().setAnimatingTrick(false), 800);
+      }, 2000);
     };
 
     const onRoundEnd = (data: any) => {
@@ -108,13 +125,18 @@ export function useSocket() {
     };
 
     const onReconnected = (data: any) => {
+      const s = useGameStore.getState();
       useGameStore.setState({ mySeatIndex: data.playerIndex });
+      if (data.roomCode) s.setRoomCode(data.roomCode);
+      if (data.players) s.setPlayers(data.players);
       if (data.gameState) {
-        const s = useGameStore.getState();
         s.setGameState(data.gameState);
         s.setScreen('game');
+      } else {
+        // No game in progress - go to lobby
+        s.setScreen('lobby');
       }
-      useGameStore.getState().addNotification('Reconnected!', 'success');
+      s.addNotification('Reconnected!', 'success');
     };
 
     const onRoomHistory = (data: any) => {

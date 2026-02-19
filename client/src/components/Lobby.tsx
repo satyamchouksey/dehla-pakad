@@ -4,6 +4,8 @@ import { useGameStore } from '@/store/gameStore';
 import { useAuthStore } from '@/store/authStore';
 import { AVATARS } from '@/lib/cards';
 import { VoiceChat } from './VoiceChat';
+import { VideoTile } from './VideoTile';
+import { useVoiceChatContext } from '@/contexts/VoiceChatContext';
 
 interface LobbyProps {
   onCreateRoom: (name: string, avatar: number) => void;
@@ -15,6 +17,7 @@ interface LobbyProps {
 
 export function Lobby({ onCreateRoom, onJoinRoom, onStartGame, onReconnectRoom, onRequestHistory }: LobbyProps) {
   const { screen, roomCode, players, mySeatIndex, roomHistory } = useGameStore();
+  const { isInVoice, localStream, peers: voicePeers } = useVoiceChatContext();
   const authUser = useAuthStore((s) => s.user);
   const [name, setName] = useState(authUser?.name || '');
   const [code, setCode] = useState('');
@@ -113,6 +116,20 @@ export function Lobby({ onCreateRoom, onJoinRoom, onStartGame, onReconnectRoom, 
         <div className="border-t border-white/10 pt-4">
           <VoiceChat />
         </div>
+
+        {/* Video tiles grid */}
+        {isInVoice && (
+          <div className="flex flex-wrap justify-center gap-2">
+            <VideoTile stream={localStream} label="You" isSelf />
+            {voicePeers.map((peer) => (
+              <VideoTile
+                key={peer.peerId}
+                stream={peer.stream}
+                label={peer.name}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="text-center text-xs text-white/30 space-y-1">
           <div>Teams: Seat 1 & 3 (Team A) vs Seat 2 & 4 (Team B)</div>

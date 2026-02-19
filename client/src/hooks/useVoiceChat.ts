@@ -184,15 +184,26 @@ export function useVoiceChat() {
 
     const existingVideoTrack = localStreamRef.current.getVideoTracks()[0];
 
-    if (existingVideoTrack) {
-      // Toggle existing video track on/off
-      existingVideoTrack.enabled = !existingVideoTrack.enabled;
-      isVideoOnRef.current = existingVideoTrack.enabled;
-      setIsVideoOn(existingVideoTrack.enabled);
-      // Force re-render of localStream reference
+    if (existingVideoTrack && isVideoOnRef.current) {
+      // Turn OFF: stop the track completely so camera LED turns off
+      existingVideoTrack.stop();
+      localStreamRef.current.removeTrack(existingVideoTrack);
+
+      // Remove video sender from all peer connections
+      for (const [, peerInfo] of peersRef.current) {
+        const senders = peerInfo.connection.getSenders();
+        for (const sender of senders) {
+          if (sender.track === existingVideoTrack || sender.track?.kind === 'video') {
+            try { peerInfo.connection.removeTrack(sender); } catch (e) { /* ignore */ }
+          }
+        }
+      }
+
+      isVideoOnRef.current = false;
+      setIsVideoOn(false);
       setLocalStream(localStreamRef.current);
     } else {
-      // First time: request camera and add video track to stream + all peer connections
+      // Turn ON: request fresh camera and add video track
       try {
         const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
         const videoTrack = videoStream.getVideoTracks()[0];

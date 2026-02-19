@@ -142,6 +142,8 @@ export interface ErrorPayload {
 export interface ReconnectedPayload {
   playerIndex: number;
   gameState: ClientGameState | null;
+  roomCode: string;
+  players: Player[];
 }
 
 // Auth types

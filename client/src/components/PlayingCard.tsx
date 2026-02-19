@@ -13,6 +13,7 @@ interface PlayingCardProps {
   medium?: boolean;
   index?: number;
   total?: number;
+  isTrump?: boolean;
 }
 
 const SUIT_CODES: Record<string, string> = {
@@ -30,17 +31,19 @@ function PlayingCardInner({
   highlighted = false,
   small = false,
   medium = false,
+  isTrump = false,
 }: PlayingCardProps) {
   const w = small
     ? 'w-10 h-14'
     : medium
       ? 'w-14 h-20 sm:w-16 sm:h-[5.5rem]'
       : 'w-16 h-[5.8rem] sm:w-[4.8rem] sm:h-[7rem]';
-  const cornerText = small ? 'text-[0.5rem]' : medium ? 'text-[0.6rem] sm:text-xs' : 'text-xs sm:text-sm';
-  const cornerSuit = small ? 'text-[0.45rem]' : medium ? 'text-[0.5rem] sm:text-[0.6rem]' : 'text-[0.6rem] sm:text-xs';
+  const cornerText = small ? 'text-[0.55rem]' : medium ? 'text-[0.65rem] sm:text-sm' : 'text-sm sm:text-base';
+  const cornerSuit = small ? 'text-[0.55rem]' : medium ? 'text-[0.65rem] sm:text-sm' : 'text-sm sm:text-base';
   const centerRank = small ? 'text-lg' : medium ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl';
   const centerSuit = small ? 'text-xs' : medium ? 'text-base sm:text-lg' : 'text-lg sm:text-xl';
   const radius = small ? 'rounded-md' : 'rounded-lg';
+  const trumpGlow = isTrump && !small ? 'ring-2 ring-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.4)]' : '';
 
   if (faceDown || !card) {
     return (
@@ -84,6 +87,7 @@ function PlayingCardInner({
           bg-white border-2 transition-all duration-200 cursor-pointer shadow-card
           ${highlighted ? 'ring-2 ring-gold shadow-glow border-gold/70' : 'border-gray-300'}
           ${!disabled ? 'hover:shadow-card-hover active:shadow-card' : ''}
+          ${!highlighted && trumpGlow}
         `}
       >
         <img
@@ -109,6 +113,7 @@ function PlayingCardInner({
         ${highlighted ? 'ring-2 ring-gold shadow-glow border-gold/70' : 'border-gray-300'}
         ${!disabled ? 'hover:shadow-card-hover active:shadow-card' : ''}
         ${isTen ? 'ring-1 ring-gold/40' : ''}
+        ${!highlighted && trumpGlow}
       `}
     >
       {/* Top-left corner */}

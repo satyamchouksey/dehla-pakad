@@ -7,6 +7,7 @@ import { PlayerSeat } from './PlayerSeat';
 import { TrickArea } from './TrickArea';
 import { ScoreBoard } from './ScoreBoard';
 import { DehlaCapture } from './DehlaCapture';
+import { TrumpReveal } from './TrumpReveal';
 import { VoiceChat } from './VoiceChat';
 import { VideoTile } from './VideoTile';
 
@@ -46,8 +47,9 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
 
   return (
     <div className="felt-texture w-full h-[100dvh] flex flex-col relative overflow-hidden">
-      {/* Dehla capture celebration overlay */}
+      {/* Celebration overlays */}
       <DehlaCapture />
+      <TrumpReveal />
 
       {/* Mobile: top bar with score + voice + turn (relative, no overlap) */}
       <div className="lg:hidden relative z-20 w-full px-3 pt-2 pb-1 flex-shrink-0">
@@ -64,6 +66,14 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             compact
           />
           <div className="ml-auto flex items-center gap-1.5">
+            {trumpSuit && (
+              <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30">
+                <span className="text-[0.5rem] text-purple-300">T</span>
+                <span className={`text-sm ${trumpSuit === 'hearts' || trumpSuit === 'diamonds' ? 'text-red-500' : 'text-white'}`}>
+                  {trumpSuit === 'hearts' ? '♥' : trumpSuit === 'diamonds' ? '♦' : trumpSuit === 'clubs' ? '♣' : '♠'}
+                </span>
+              </div>
+            )}
             <VoiceChat compact />
             {phase === 'playing' && (
               <div className={`px-2.5 py-1.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap flex-shrink-0
@@ -105,6 +115,16 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
           myTeam={myTeam}
         />
       </div>
+
+      {/* Trump suit indicator - top left */}
+      {trumpSuit && (
+        <div className="absolute top-2 left-2 z-20 hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full glass border border-purple-500/30">
+          <span className="text-xs text-white/50">Trump</span>
+          <span className={`text-lg ${trumpSuit === 'hearts' || trumpSuit === 'diamonds' ? 'text-red-500' : 'text-white'}`}>
+            {trumpSuit === 'hearts' ? '♥' : trumpSuit === 'diamonds' ? '♦' : trumpSuit === 'clubs' ? '♣' : '♠'}
+          </span>
+        </div>
+      )}
 
       {/* Game layout */}
       <div className="flex-1 flex flex-col items-center justify-between lg:pt-10 pb-2 sm:pb-4 px-3 sm:px-4 min-h-0">
@@ -196,6 +216,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             cards={myHand}
             isMyTurn={isMyTurn}
             leadSuit={leadSuit}
+            trumpSuit={trumpSuit}
             onPlayCard={onPlayCard}
           />
         </div>

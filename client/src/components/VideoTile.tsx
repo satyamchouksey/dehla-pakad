@@ -52,7 +52,7 @@ export function VideoTile({ stream, label, isSelf = false }: VideoTileProps) {
   }, [stream]);
 
   return (
-    <div className="w-[68px] h-[52px] sm:w-[88px] sm:h-[66px] rounded-2xl overflow-hidden bg-black/70 border border-white/15 relative shadow-lg backdrop-blur-sm">
+    <div className="w-[96px] h-[72px] sm:w-[120px] sm:h-[90px] rounded-2xl overflow-hidden bg-black/70 border border-white/15 relative shadow-lg backdrop-blur-sm">
       {/* Always mount video element, toggle visibility */}
       <video
         ref={videoRef}

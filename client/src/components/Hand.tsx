@@ -7,10 +7,11 @@ interface HandProps {
   cards: Card[];
   isMyTurn: boolean;
   leadSuit: Suit | null;
+  trumpSuit: Suit | null;
   onPlayCard: (cardId: string) => void;
 }
 
-function HandInner({ cards, isMyTurn, leadSuit, onPlayCard }: HandProps) {
+function HandInner({ cards, isMyTurn, leadSuit, trumpSuit, onPlayCard }: HandProps) {
   const [scale, setScale] = useState(1);
 
   const canPlayCard = useCallback(
@@ -85,6 +86,7 @@ function HandInner({ cards, isMyTurn, leadSuit, onPlayCard }: HandProps) {
                   onClick={() => playable && onPlayCard(card.id)}
                   disabled={!playable}
                   highlighted={isMyTurn && playable}
+                  isTrump={!!trumpSuit && card.suit === trumpSuit}
                   index={i}
                   total={cards.length}
                 />
