@@ -4,11 +4,14 @@ import { useVoiceChat, type VoicePeer } from '@/hooks/useVoiceChat';
 interface VoiceChatContextValue {
   isInVoice: boolean;
   isMuted: boolean;
+  isVideoOn: boolean;
   peers: VoicePeer[];
   micError: string | null;
+  localStream: MediaStream | null;
   joinVoice: () => Promise<void>;
   leaveVoice: () => void;
   toggleMute: () => void;
+  toggleVideo: () => Promise<void>;
 }
 
 const VoiceChatContext = createContext<VoiceChatContextValue | null>(null);

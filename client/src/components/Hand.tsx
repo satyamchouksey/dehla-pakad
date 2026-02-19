@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card, Suit } from '@shared/types';
 import { PlayingCard } from './PlayingCard';
@@ -11,6 +11,8 @@ interface HandProps {
 }
 
 function HandInner({ cards, isMyTurn, leadSuit, onPlayCard }: HandProps) {
+  const [scale, setScale] = useState(1);
+
   const canPlayCard = useCallback(
     (card: Card): boolean => {
       if (!isMyTurn) return false;
@@ -24,15 +26,39 @@ function HandInner({ cards, isMyTurn, leadSuit, onPlayCard }: HandProps) {
 
   const fanAngle = Math.min(2.5, 30 / Math.max(cards.length, 1));
   const startAngle = -((cards.length - 1) * fanAngle) / 2;
+  const overlap = Math.max(-28, -56 + cards.length * 2);
+
+  // Dynamically scale the hand to fit within screen width
+  useEffect(() => {
+    const updateScale = () => {
+      const cardWidth = window.innerWidth < 640 ? 64 : 76.8;
+      const availableWidth = window.innerWidth - 24;
+      if (cards.length <= 1) { setScale(1); return; }
+      const effectiveStep = cardWidth + overlap;
+      const naturalWidth = cardWidth + (cards.length - 1) * effectiveStep;
+      setScale(naturalWidth > availableWidth ? availableWidth / naturalWidth : 1);
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [cards.length, overlap]);
+
+  const containerHeight = Math.max(5, 6.5 * scale);
 
   return (
-    <div className="flex justify-center items-end relative" style={{ minHeight: '6.5rem' }}>
-      <div className="flex items-end justify-center relative">
+    <div className="relative w-full" style={{ height: `${containerHeight}rem` }}>
+      <div
+        className="absolute bottom-0 left-0 right-0 flex items-end justify-center"
+        style={{
+          minHeight: '6.5rem',
+          transform: scale < 1 ? `scale(${scale})` : undefined,
+          transformOrigin: 'bottom center',
+        }}
+      >
         <AnimatePresence mode="popLayout">
           {cards.map((card, i) => {
             const angle = startAngle + i * fanAngle;
             const playable = canPlayCard(card);
-            const overlap = Math.max(-28, -56 + cards.length * 2);
 
             return (
               <motion.div

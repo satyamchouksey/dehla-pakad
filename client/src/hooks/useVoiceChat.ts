@@ -21,15 +21,19 @@ export interface VoicePeer {
   seatIndex: number;
   name: string;
   hasAudio: boolean;
+  stream: MediaStream | null;
 }
 
 export function useVoiceChat() {
   const [isInVoice, setIsInVoice] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOn, setIsVideoOn] = useState(false);
   const [peers, setPeers] = useState<VoicePeer[]>([]);
   const [micError, setMicError] = useState<string | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const isInVoiceRef = useRef(false);
+  const isVideoOnRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, PeerInfo>>(new Map());
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -45,6 +49,7 @@ export function useVoiceChat() {
         seatIndex: info.seatIndex,
         name: info.name,
         hasAudio: !!info.stream,
+        stream: info.stream || null,
       });
     }
     setPeers(list);
@@ -139,6 +144,7 @@ export function useVoiceChat() {
       localStreamRef.current = stream;
       isInVoiceRef.current = true;
       setIsInVoice(true);
+      setLocalStream(stream);
 
       const socket = getSocket();
       socket.emit('voice:join');
@@ -154,8 +160,11 @@ export function useVoiceChat() {
     socket.emit('voice:leave');
     cleanupAll();
     isInVoiceRef.current = false;
+    isVideoOnRef.current = false;
     setIsInVoice(false);
     setIsMuted(false);
+    setIsVideoOn(false);
+    setLocalStream(null);
   }, [cleanupAll]);
 
   // Toggle mute
@@ -165,6 +174,53 @@ export function useVoiceChat() {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsMuted(!audioTrack.enabled);
+      }
+    }
+  }, []);
+
+  // Toggle video
+  const toggleVideo = useCallback(async () => {
+    if (!isInVoiceRef.current || !localStreamRef.current) return;
+
+    const existingVideoTrack = localStreamRef.current.getVideoTracks()[0];
+
+    if (existingVideoTrack) {
+      // Toggle existing video track on/off
+      existingVideoTrack.enabled = !existingVideoTrack.enabled;
+      isVideoOnRef.current = existingVideoTrack.enabled;
+      setIsVideoOn(existingVideoTrack.enabled);
+      // Force re-render of localStream reference
+      setLocalStream(localStreamRef.current);
+    } else {
+      // First time: request camera and add video track to stream + all peer connections
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoTrack = videoStream.getVideoTracks()[0];
+        localStreamRef.current.addTrack(videoTrack);
+
+        // Add video track to all existing peer connections and renegotiate
+        const socket = getSocket();
+        for (const [peerId, peerInfo] of peersRef.current) {
+          peerInfo.connection.addTrack(videoTrack, localStreamRef.current);
+          try {
+            const offer = await peerInfo.connection.createOffer();
+            await peerInfo.connection.setLocalDescription(offer);
+            socket.emit('voice:signal', {
+              to: peerId,
+              signal: offer,
+              type: 'offer',
+            });
+          } catch (err) {
+            console.error('[Voice] Renegotiation error:', err);
+          }
+        }
+
+        isVideoOnRef.current = true;
+        setIsVideoOn(true);
+        setLocalStream(localStreamRef.current);
+      } catch (err) {
+        console.error('[Voice] Camera access error:', err);
+        setMicError('Could not access camera. Please allow camera permission.');
       }
     }
   }, []);
@@ -284,10 +340,13 @@ export function useVoiceChat() {
   return {
     isInVoice,
     isMuted,
+    isVideoOn,
     peers,
     micError,
+    localStream,
     joinVoice,
     leaveVoice,
     toggleMute,
+    toggleVideo,
   };
 }

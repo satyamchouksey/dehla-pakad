@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
+import { useVoiceChatContext } from '@/contexts/VoiceChatContext';
 import { Hand } from './Hand';
 import { PlayerSeat } from './PlayerSeat';
 import { TrickArea } from './TrickArea';
 import { ScoreBoard } from './ScoreBoard';
 import { DehlaCapture } from './DehlaCapture';
 import { VoiceChat } from './VoiceChat';
+import { VideoTile } from './VideoTile';
 
 interface GameBoardProps {
   onPlayCard: (cardId: string) => void;
@@ -21,8 +23,14 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
     roundNumber, handSizes, matchTarget, animatingTrick,
   } = useGameStore();
 
+  const { isInVoice, localStream, peers: voicePeers } = useVoiceChatContext();
+
   const isMyTurn = currentPlayerIndex === mySeatIndex;
   const myTeam = mySeatIndex % 2 === 0 ? 'A' as const : 'B' as const;
+
+  const getStreamForSeat = (seatIndex: number): MediaStream | null => {
+    return voicePeers.find((p) => p.seatIndex === seatIndex)?.stream || null;
+  };
 
   const seatOrder = useMemo(() => {
     const order: number[] = [];
@@ -101,7 +109,8 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
       {/* Game layout */}
       <div className="flex-1 flex flex-col items-center justify-between lg:pt-10 pb-2 sm:pb-4 px-3 sm:px-4 min-h-0">
         {/* Top player */}
-        <div className="flex justify-center flex-shrink-0">
+        <div className="flex items-start justify-center gap-2 flex-shrink-0 w-full">
+          <div className="flex-1" />
           <PlayerSeat
             player={players[topPlayer]}
             isCurrentTurn={currentPlayerIndex === topPlayer}
@@ -110,11 +119,25 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             position="top"
             isPartner={topPlayer % 2 === mySeatIndex % 2}
           />
+          <div className="flex-1 flex justify-end">
+            {isInVoice && (
+              <VideoTile
+                stream={getStreamForSeat(topPlayer)}
+                label={players[topPlayer]?.name}
+              />
+            )}
+          </div>
         </div>
 
         {/* Middle row: left player - trick area - right player */}
         <div className="flex items-center justify-between w-full max-w-3xl flex-shrink-0 px-1">
-          <div className="flex-shrink-0 w-20 sm:w-auto">
+          <div className="flex-shrink-0 w-20 sm:w-auto flex flex-col items-center gap-1">
+            {isInVoice && (
+              <VideoTile
+                stream={getStreamForSeat(leftPlayer)}
+                label={players[leftPlayer]?.name}
+              />
+            )}
             <PlayerSeat
               player={players[leftPlayer]}
               isCurrentTurn={currentPlayerIndex === leftPlayer}
@@ -133,7 +156,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             />
           </div>
 
-          <div className="flex-shrink-0 w-20 sm:w-auto">
+          <div className="flex-shrink-0 w-20 sm:w-auto flex flex-col items-center gap-1">
             <PlayerSeat
               player={players[rightPlayer]}
               isCurrentTurn={currentPlayerIndex === rightPlayer}
@@ -142,11 +165,27 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
               position="right"
               isPartner={rightPlayer % 2 === mySeatIndex % 2}
             />
+            {isInVoice && (
+              <VideoTile
+                stream={getStreamForSeat(rightPlayer)}
+                label={players[rightPlayer]?.name}
+              />
+            )}
           </div>
         </div>
 
         {/* Bottom: my hand */}
-        <div className="w-full max-w-3xl flex-shrink-0">
+        <div className="w-full max-w-3xl flex-shrink-0 relative">
+          {/* My video tile - bottom left */}
+          {isInVoice && (
+            <div className="absolute -top-2 left-0 z-10 -translate-y-full">
+              <VideoTile
+                stream={localStream}
+                label={players[mySeatIndex]?.name}
+                isSelf
+              />
+            </div>
+          )}
           <div className="text-center mb-0.5">
             <span className="text-[0.6rem] sm:text-xs text-white/30">
               {players[mySeatIndex]?.name} (Team {myTeam})
