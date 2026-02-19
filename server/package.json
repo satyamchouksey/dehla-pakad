@@ -1,7 +1,6 @@
 {
   "name": "dehla-pakad-server",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/server/src/index.js",
