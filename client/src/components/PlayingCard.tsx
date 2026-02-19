@@ -40,7 +40,7 @@ function PlayingCardInner({
   const cornerSuit = small ? 'text-[0.45rem]' : medium ? 'text-[0.5rem] sm:text-[0.6rem]' : 'text-[0.6rem] sm:text-xs';
   const centerRank = small ? 'text-lg' : medium ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl';
   const centerSuit = small ? 'text-xs' : medium ? 'text-base sm:text-lg' : 'text-lg sm:text-xl';
-  const radius = small ? 'rounded-lg' : 'rounded-2xl';
+  const radius = small ? 'rounded-md' : 'rounded-lg';
 
   if (faceDown || !card) {
     return (
