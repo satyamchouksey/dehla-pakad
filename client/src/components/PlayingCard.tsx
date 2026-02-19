@@ -15,10 +15,11 @@ interface PlayingCardProps {
   total?: number;
 }
 
-const FACE_ICONS: Record<string, string> = {
-  J: '♞',
-  Q: '♛',
-  K: '♚',
+const SUIT_CODES: Record<string, string> = {
+  hearts: 'H',
+  diamonds: 'D',
+  clubs: 'C',
+  spades: 'S',
 };
 
 function PlayingCardInner({
@@ -70,6 +71,33 @@ function PlayingCardInner({
   const isAce = card.rank === 'A';
   const isTen = card.rank === '10';
 
+  // Face cards (J, Q, K) - use real card images
+  if (isFace && !small) {
+    const imageUrl = `https://deckofcardsapi.com/static/img/${card.rank}${SUIT_CODES[card.suit]}.png`;
+    return (
+      <motion.button
+        whileHover={!disabled ? { y: -10, scale: 1.06 } : undefined}
+        whileTap={!disabled ? { scale: 0.95 } : undefined}
+        onClick={onClick}
+        disabled={disabled}
+        className={`${w} ${radius} select-none flex-shrink-0 relative overflow-hidden
+          bg-white border-2 transition-all duration-200 cursor-pointer shadow-card
+          ${highlighted ? 'ring-2 ring-gold shadow-glow border-gold/70' : 'border-gray-300'}
+          ${!disabled ? 'hover:shadow-card-hover active:shadow-card' : ''}
+        `}
+      >
+        <img
+          src={imageUrl}
+          alt={`${card.rank} of ${card.suit}`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          draggable={false}
+        />
+      </motion.button>
+    );
+  }
+
+  // Number cards (2-10) and Aces
   return (
     <motion.button
       whileHover={!disabled ? { y: -10, scale: 1.06 } : undefined}
@@ -77,23 +105,12 @@ function PlayingCardInner({
       onClick={onClick}
       disabled={disabled}
       className={`${w} ${radius} select-none flex-shrink-0 relative
-        bg-gradient-to-br from-white via-white to-gray-50
-        border-2 transition-all duration-200 cursor-pointer overflow-hidden
-        ${highlighted ? 'ring-2 ring-gold shadow-glow border-gold/70' : 'border-gray-200/80'}
-        ${disabled && !medium ? 'opacity-50 cursor-not-allowed' : ''}
+        bg-white border-2 transition-all duration-200 cursor-pointer overflow-hidden shadow-card
+        ${highlighted ? 'ring-2 ring-gold shadow-glow border-gold/70' : 'border-gray-300'}
         ${!disabled ? 'hover:shadow-card-hover active:shadow-card' : ''}
         ${isTen ? 'ring-1 ring-gold/40' : ''}
       `}
     >
-      {/* Subtle background pattern for face cards */}
-      {isFace && (
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 50% 40%, ${red ? '#dc2626' : '#1a1a2e'} 0%, transparent 70%)`,
-          }}
-        />
-      )}
-
       {/* Top-left corner */}
       <div className="absolute top-[3px] left-[5px] flex flex-col items-center leading-none">
         <span className={`font-extrabold ${cornerText}`} style={{ color }}>
@@ -111,17 +128,6 @@ function PlayingCardInner({
             style={{ color: red ? '#dc2626' : '#1a1a2e' }}>
             {symbol}
           </span>
-        ) : isFace ? (
-          <>
-            <span className={`${small ? 'text-lg' : medium ? 'text-2xl' : 'text-3xl'} leading-none`}
-              style={{ color: red ? '#dc2626' : '#1a1a2e' }}>
-              {FACE_ICONS[card.rank]}
-            </span>
-            <span className={`${small ? 'text-[0.5rem]' : medium ? 'text-xs' : 'text-sm'} font-black leading-tight`}
-              style={{ color }}>
-              {card.rank}
-            </span>
-          </>
         ) : (
           <>
             <span className={`font-black leading-none ${centerRank}`}

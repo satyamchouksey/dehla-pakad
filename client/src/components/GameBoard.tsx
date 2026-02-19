@@ -40,14 +40,38 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
       {/* Dehla capture celebration overlay */}
       <DehlaCapture />
 
-      {/* Turn indicator */}
+      {/* Mobile: top bar with score + turn (relative, no overlap) */}
+      <div className="lg:hidden relative z-20 w-full px-3 pt-2 pb-1 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <ScoreBoard
+            matchScores={matchScores}
+            tricksWon={tricksWon}
+            capturedTens={capturedTens}
+            trumpSuit={trumpSuit}
+            roundNumber={roundNumber}
+            trickNumber={trickNumber}
+            matchTarget={matchTarget}
+            myTeam={myTeam}
+            compact
+          />
+          {phase === 'playing' && (
+            <div className={`ml-auto px-3 py-1.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap flex-shrink-0
+              ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'bg-black/40 text-white/70 border border-white/10'}
+            `}>
+              {isMyTurn ? "Your Turn" : `${(players[currentPlayerIndex]?.name || '').split(' ')[0]}'s Turn`}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: turn indicator centered */}
       <AnimatePresence>
         {phase === 'playing' && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold
+            className={`hidden lg:block absolute top-2 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full text-sm font-semibold
               ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'glass text-white/70'}
             `}
           >
@@ -56,7 +80,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
         )}
       </AnimatePresence>
 
-      {/* Score board - desktop: top right panel */}
+      {/* Desktop: scoreboard top right */}
       <div className="absolute top-2 right-2 z-20 hidden lg:block">
         <ScoreBoard
           matchScores={matchScores}
@@ -70,23 +94,8 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
         />
       </div>
 
-      {/* Mobile/tablet compact score bar */}
-      <div className="lg:hidden absolute top-2 left-2 z-20">
-        <ScoreBoard
-          matchScores={matchScores}
-          tricksWon={tricksWon}
-          capturedTens={capturedTens}
-          trumpSuit={trumpSuit}
-          roundNumber={roundNumber}
-          trickNumber={trickNumber}
-          matchTarget={matchTarget}
-          myTeam={myTeam}
-          compact
-        />
-      </div>
-
       {/* Game layout */}
-      <div className="flex-1 flex flex-col items-center justify-between pt-10 pb-2 sm:py-12 px-1 sm:px-4 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-between lg:pt-10 pb-2 sm:pb-4 px-3 sm:px-4 min-h-0">
         {/* Top player */}
         <div className="flex justify-center flex-shrink-0">
           <PlayerSeat

@@ -50,34 +50,38 @@ function ScoreBoardInner({
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10 text-[0.65rem] sm:text-xs"
+        className="flex items-center flex-wrap gap-x-2 gap-y-1 px-2.5 py-1.5 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10 text-[0.65rem]"
       >
         <div className="flex items-center gap-1.5">
           <span className={`font-bold ${myTeam === 'A' ? 'text-cyan-400' : 'text-white/60'}`}>A:{matchScores.A}</span>
           <span className="text-white/30">vs</span>
           <span className={`font-bold ${myTeam === 'B' ? 'text-orange-400' : 'text-white/60'}`}>B:{matchScores.B}</span>
         </div>
-        <div className="w-px h-4 bg-white/15" />
+        <div className="w-px h-3 bg-white/15" />
         <span className="text-white/50">R{roundNumber} T{trickNumber}/13</span>
         {trumpSuit && (
           <>
-            <div className="w-px h-4 bg-white/15" />
-            <span style={{ color: trumpColor }} className="text-sm">{SUIT_SYMBOLS[trumpSuit]}</span>
+            <div className="w-px h-3 bg-white/15" />
+            <span style={{ color: trumpColor }} className="text-sm leading-none">{SUIT_SYMBOLS[trumpSuit]}</span>
           </>
         )}
-        <div className="w-px h-4 bg-white/15" />
-        <div className="flex gap-1">
-          {capturedTens.A.map((c) => (
-            <span key={c.id} className="text-[0.65rem]" style={{ color: c.suit === 'hearts' || c.suit === 'diamonds' ? '#ef4444' : '#a1a1aa' }}>
-              10{SUIT_SYMBOLS[c.suit]}
-            </span>
-          ))}
-          {capturedTens.B.map((c) => (
-            <span key={c.id} className="text-[0.65rem]" style={{ color: c.suit === 'hearts' || c.suit === 'diamonds' ? '#ef4444' : '#a1a1aa' }}>
-              10{SUIT_SYMBOLS[c.suit]}
-            </span>
-          ))}
-        </div>
+        {(capturedTens.A.length > 0 || capturedTens.B.length > 0) && (
+          <>
+            <div className="w-px h-3 bg-white/15" />
+            <div className="flex gap-0.5">
+              {capturedTens.A.map((c) => (
+                <span key={c.id} className="text-[0.6rem]" style={{ color: c.suit === 'hearts' || c.suit === 'diamonds' ? '#ef4444' : '#a1a1aa' }}>
+                  10{SUIT_SYMBOLS[c.suit]}
+                </span>
+              ))}
+              {capturedTens.B.map((c) => (
+                <span key={c.id} className="text-[0.6rem]" style={{ color: c.suit === 'hearts' || c.suit === 'diamonds' ? '#ef4444' : '#a1a1aa' }}>
+                  10{SUIT_SYMBOLS[c.suit]}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </motion.div>
     );
   }
