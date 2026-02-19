@@ -6,6 +6,7 @@ import { Login } from '@/components/Login';
 import { Lobby } from '@/components/Lobby';
 import { GameBoard } from '@/components/GameBoard';
 import { Notifications } from '@/components/Notifications';
+import { VoiceChatProvider } from '@/contexts/VoiceChatContext';
 
 export default function App() {
   const { user, loading, restore } = useAuthStore();
@@ -54,24 +55,26 @@ function AuthenticatedApp() {
   }, []);
 
   return (
-    <div className="min-h-screen min-h-[100dvh]">
-      <Notifications />
+    <VoiceChatProvider>
+      <div className="min-h-screen min-h-[100dvh]">
+        <Notifications />
 
-      {(screen === 'home' || screen === 'lobby') && (
-        <div className="min-h-screen flex items-center justify-center felt-texture">
-          <Lobby
-            onCreateRoom={createRoom}
-            onJoinRoom={joinRoom}
-            onStartGame={startGame}
-            onReconnectRoom={reconnectRoom}
-            onRequestHistory={requestHistory}
-          />
-        </div>
-      )}
+        {(screen === 'home' || screen === 'lobby') && (
+          <div className="min-h-screen flex items-center justify-center felt-texture">
+            <Lobby
+              onCreateRoom={createRoom}
+              onJoinRoom={joinRoom}
+              onStartGame={startGame}
+              onReconnectRoom={reconnectRoom}
+              onRequestHistory={requestHistory}
+            />
+          </div>
+        )}
 
-      {screen === 'game' && (
-        <GameBoard onPlayCard={playCard} onNewRound={newRound} />
-      )}
-    </div>
+        {screen === 'game' && (
+          <GameBoard onPlayCard={playCard} onNewRound={newRound} />
+        )}
+      </div>
+    </VoiceChatProvider>
   );
 }

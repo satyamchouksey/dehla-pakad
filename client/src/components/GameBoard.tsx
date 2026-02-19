@@ -6,6 +6,7 @@ import { PlayerSeat } from './PlayerSeat';
 import { TrickArea } from './TrickArea';
 import { ScoreBoard } from './ScoreBoard';
 import { DehlaCapture } from './DehlaCapture';
+import { VoiceChat } from './VoiceChat';
 
 interface GameBoardProps {
   onPlayCard: (cardId: string) => void;
@@ -40,7 +41,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
       {/* Dehla capture celebration overlay */}
       <DehlaCapture />
 
-      {/* Mobile: top bar with score + turn (relative, no overlap) */}
+      {/* Mobile: top bar with score + voice + turn (relative, no overlap) */}
       <div className="lg:hidden relative z-20 w-full px-3 pt-2 pb-1 flex-shrink-0">
         <div className="flex items-center gap-2">
           <ScoreBoard
@@ -54,13 +55,16 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             myTeam={myTeam}
             compact
           />
-          {phase === 'playing' && (
-            <div className={`ml-auto px-3 py-1.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap flex-shrink-0
-              ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'bg-black/40 text-white/70 border border-white/10'}
-            `}>
-              {isMyTurn ? "Your Turn" : `${(players[currentPlayerIndex]?.name || '').split(' ')[0]}'s Turn`}
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            <VoiceChat compact />
+            {phase === 'playing' && (
+              <div className={`px-2.5 py-1.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap flex-shrink-0
+                ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'bg-black/40 text-white/70 border border-white/10'}
+              `}>
+                {isMyTurn ? "Your Turn" : `${(players[currentPlayerIndex]?.name || '').split(' ')[0]}'s Turn`}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

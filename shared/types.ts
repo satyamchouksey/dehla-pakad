@@ -170,6 +170,29 @@ export interface AuthPayload {
   user: AuthUser;
 }
 
+// Voice chat types
+export interface VoiceJoinedPayload {
+  peerId: string;
+  seatIndex: number;
+  name: string;
+}
+
+export interface VoiceLeftPayload {
+  peerId: string;
+  seatIndex: number;
+}
+
+export interface VoicePeersPayload {
+  peers: { peerId: string; seatIndex: number; name: string }[];
+}
+
+export interface VoiceSignalPayload {
+  from: string;
+  to: string;
+  signal: any;
+  type: 'offer' | 'answer' | 'ice-candidate';
+}
+
 // Socket event maps
 export interface ServerToClientEvents {
   'room:created': (data: RoomCreatedPayload) => void;
@@ -185,6 +208,10 @@ export interface ServerToClientEvents {
   'game:error': (data: ErrorPayload) => void;
   'player:reconnected': (data: ReconnectedPayload) => void;
   'room:history': (data: RoomHistoryPayload) => void;
+  'voice:joined': (data: VoiceJoinedPayload) => void;
+  'voice:left': (data: VoiceLeftPayload) => void;
+  'voice:peers': (data: VoicePeersPayload) => void;
+  'voice:signal': (data: VoiceSignalPayload) => void;
 }
 
 export interface ClientToServerEvents {
@@ -195,4 +222,7 @@ export interface ClientToServerEvents {
   'game:newRound': () => void;
   'room:reconnect': (data: { roomCode: string; playerId: string }) => void;
   'room:history': () => void;
+  'voice:join': () => void;
+  'voice:leave': () => void;
+  'voice:signal': (data: { to: string; signal: any; type: 'offer' | 'answer' | 'ice-candidate' }) => void;
 }

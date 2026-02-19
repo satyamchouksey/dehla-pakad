@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useAuthStore } from '@/store/authStore';
 import { AVATARS } from '@/lib/cards';
+import { VoiceChat } from './VoiceChat';
 
 interface LobbyProps {
   onCreateRoom: (name: string, avatar: number) => void;
@@ -106,6 +107,11 @@ export function Lobby({ onCreateRoom, onJoinRoom, onStartGame, onReconnectRoom, 
               );
             })}
           </div>
+        </div>
+
+        {/* Voice Chat */}
+        <div className="border-t border-white/10 pt-4">
+          <VoiceChat />
         </div>
 
         <div className="text-center text-xs text-white/30 space-y-1">
