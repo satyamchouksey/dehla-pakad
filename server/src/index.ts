@@ -1,20 +1,18 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import path from 'path';
 import cors from 'cors';
 import { RoomManager } from './rooms/RoomManager';
 import { registerSocketHandlers } from './socket/handlers';
+import { connectDB } from './config/db';
+import { verifyGoogleToken, createJWT } from './auth/google';
+import { UserModel } from './models/User';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// Serve client build in production
-const clientDist = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
 
 const httpServer = createServer(app);
 
@@ -31,22 +29,74 @@ const roomManager = new RoomManager();
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', rooms: 0 });
+  res.json({ status: 'ok' });
+});
+
+// Google Auth endpoint
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      res.status(400).json({ error: 'Missing idToken' });
+      return;
+    }
+
+    const userInfo = await verifyGoogleToken(idToken);
+    if (!userInfo) {
+      res.status(401).json({ error: 'Invalid Google token' });
+      return;
+    }
+
+    // Upsert user in DB
+    const user = await UserModel.findOneAndUpdate(
+      { googleId: userInfo.googleId },
+      {
+        googleId: userInfo.googleId,
+        name: userInfo.name,
+        email: userInfo.email,
+        picture: userInfo.picture,
+        lastSeen: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+
+    const token = createJWT(userInfo.googleId, userInfo.email, userInfo.name);
+
+    res.json({
+      token,
+      user: {
+        googleId: userInfo.googleId,
+        name: userInfo.name,
+        email: userInfo.email,
+        avatar: user.avatar,
+        picture: userInfo.picture,
+      },
+    });
+  } catch (err) {
+    console.error('[Auth] Error:', err);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
 });
 
 // Register socket handlers
 registerSocketHandlers(io, roomManager);
-
-// SPA fallback — serve index.html for all non-API, non-socket routes
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(clientDist, 'index.html'));
-});
 
 // Cleanup stale rooms every 30 minutes
 setInterval(() => {
   roomManager.cleanupStaleRooms();
 }, 1800000);
 
-httpServer.listen(PORT, () => {
-  console.log(`🃏 Dehla Pakad server running on port ${PORT}`);
+// Start server
+async function start() {
+  await connectDB();
+  await roomManager.restoreRooms();
+
+  httpServer.listen(PORT, () => {
+    console.log(`🃏 Dehla Pakad server running on port ${PORT}`);
+  });
+}
+
+start().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

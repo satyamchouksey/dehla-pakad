@@ -5,19 +5,34 @@ import {
   ClientGameState,
 } from '../../../shared/types';
 import { RoomManager } from '../rooms/RoomManager';
+import { verifyJWT } from '../auth/google';
 
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+
+function getGoogleId(socket: TypedSocket): string | null {
+  const token = socket.handshake.auth?.token;
+  if (!token) return null;
+  const payload = verifyJWT(token);
+  return payload?.googleId || null;
+}
 
 export function registerSocketHandlers(
   io: TypedServer,
   roomManager: RoomManager
 ): void {
   io.on('connection', (socket: TypedSocket) => {
-    console.log(`[Socket] Connected: ${socket.id}`);
+    const googleId = getGoogleId(socket);
+    if (!googleId) {
+      console.log(`[Socket] Unauthenticated connection rejected: ${socket.id}`);
+      socket.emit('game:error', { message: 'Authentication required. Please sign in.' });
+      socket.disconnect();
+      return;
+    }
+    console.log(`[Socket] Connected: ${socket.id} (user: ${googleId})`);
 
     socket.on('room:create', ({ playerName, avatar }) => {
-      const room = roomManager.createRoom(socket.id, playerName, avatar);
+      const room = roomManager.createRoom(socket.id, googleId, playerName, avatar);
       socket.join(room.code);
       socket.emit('room:created', {
         roomCode: room.code,
@@ -28,7 +43,7 @@ export function registerSocketHandlers(
     });
 
     socket.on('room:join', ({ roomCode, playerName, avatar }) => {
-      const result = roomManager.joinRoom(roomCode.toUpperCase(), socket.id, playerName, avatar);
+      const result = roomManager.joinRoom(roomCode.toUpperCase(), socket.id, googleId, playerName, avatar);
 
       if ('error' in result) {
         socket.emit('game:error', { message: result.error });
@@ -174,8 +189,8 @@ export function registerSocketHandlers(
       console.log(`[Game] New round started in ${roomCode}`);
     });
 
-    socket.on('room:reconnect', ({ roomCode, playerId }) => {
-      const result = roomManager.handleReconnect(roomCode, playerId, socket.id);
+    socket.on('room:reconnect', ({ roomCode }) => {
+      const result = roomManager.handleReconnect(roomCode, googleId, socket.id);
 
       if ('error' in result) {
         socket.emit('game:error', { message: result.error });
@@ -199,6 +214,11 @@ export function registerSocketHandlers(
       console.log(`[Socket] Player ${seatIndex} reconnected to ${room.code}`);
     });
 
+    socket.on('room:history', async () => {
+      const rooms = await roomManager.getRoomHistory(googleId);
+      socket.emit('room:history', { rooms });
+    });
+
     socket.on('disconnect', () => {
       const result = roomManager.handleDisconnect(socket.id);
       if (result) {
@@ -216,7 +236,7 @@ export function registerSocketHandlers(
 function broadcastGameState(
   io: TypedServer,
   room: ReturnType<RoomManager['getRoom']>,
-  _roomManager: RoomManager
+  roomManager: RoomManager
 ): void {
   if (!room || !room.engine) return;
 
@@ -227,4 +247,7 @@ function broadcastGameState(
       io.to(socketId).emit('game:stateUpdate', clientState);
     }
   }
+
+  // Persist game state to DB after each update
+  roomManager.persistGameState(room.code);
 }

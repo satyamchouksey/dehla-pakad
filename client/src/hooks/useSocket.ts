@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { connectSocket, getSocket } from '@/lib/socket';
+import type { RoomHistoryEntry } from '@shared/types';
 
 export function useSocket() {
   useEffect(() => {
@@ -116,6 +117,10 @@ export function useSocket() {
       useGameStore.getState().addNotification('Reconnected!', 'success');
     };
 
+    const onRoomHistory = (data: any) => {
+      useGameStore.getState().setRoomHistory(data.rooms || []);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('room:created', onRoomCreated);
@@ -130,6 +135,7 @@ export function useSocket() {
     socket.on('game:matchEnd', onMatchEnd);
     socket.on('game:error', onError);
     socket.on('player:reconnected', onReconnected);
+    socket.on('room:history', onRoomHistory);
 
     return () => {
       socket.off('connect', onConnect);
@@ -146,6 +152,7 @@ export function useSocket() {
       socket.off('game:matchEnd', onMatchEnd);
       socket.off('game:error', onError);
       socket.off('player:reconnected', onReconnected);
+      socket.off('room:history', onRoomHistory);
     };
   }, []);
 
@@ -174,5 +181,15 @@ export function useSocket() {
     socket.emit('game:newRound');
   }, []);
 
-  return { createRoom, joinRoom, startGame, playCard, newRound };
+  const requestHistory = useCallback(() => {
+    const socket = getSocket();
+    socket.emit('room:history');
+  }, []);
+
+  const reconnectRoom = useCallback((roomCode: string) => {
+    const socket = getSocket();
+    socket.emit('room:reconnect', { roomCode, playerId: '' });
+  }, []);
+
+  return { createRoom, joinRoom, startGame, playCard, newRound, requestHistory, reconnectRoom };
 }

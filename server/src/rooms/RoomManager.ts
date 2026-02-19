@@ -1,10 +1,13 @@
-import { Player, Team } from '../../../shared/types';
+import { Player, Team, GameState } from '../../../shared/types';
 import { GameEngine } from '../game/GameEngine';
+import { RoomModel } from '../models/Room';
+import { isDBConnected } from '../config/db';
 
 export interface Room {
   code: string;
   players: Player[];
   engine: GameEngine | null;
+  lockedPlayerIds: string[];
   playerSocketMap: Map<number, string>; // seatIndex -> socketId
   socketPlayerMap: Map<string, number>; // socketId -> seatIndex
   createdAt: number;
@@ -23,7 +26,81 @@ export class RoomManager {
   private rooms: Map<string, Room> = new Map();
   private playerRoomMap: Map<string, string> = new Map(); // socketId -> roomCode
 
-  createRoom(socketId: string, playerName: string, avatar: number): Room {
+  // Persist room to MongoDB (fire-and-forget)
+  private async persistRoom(room: Room): Promise<void> {
+    if (!isDBConnected()) return;
+    try {
+      const gameState = room.engine ? room.engine.getSerializableState() : null;
+      const status = room.engine
+        ? (room.engine.getPhase() === 'matchEnd' ? 'finished' : 'playing')
+        : 'waiting';
+
+      await RoomModel.findOneAndUpdate(
+        { code: room.code },
+        {
+          code: room.code,
+          status,
+          players: room.players.map(p => ({
+            googleId: p.googleId,
+            name: p.name,
+            seatIndex: p.seatIndex,
+            avatar: p.avatar,
+          })),
+          lockedPlayerIds: room.lockedPlayerIds,
+          gameState,
+          updatedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.error('[RoomManager] Failed to persist room:', err);
+    }
+  }
+
+  // Restore active rooms from MongoDB on server restart
+  async restoreRooms(): Promise<void> {
+    if (!isDBConnected()) return;
+    try {
+      const dbRooms = await RoomModel.find({ status: { $in: ['waiting', 'playing'] } });
+      for (const dbRoom of dbRooms) {
+        const players: Player[] = dbRoom.players.map(p => ({
+          id: '',
+          googleId: p.googleId,
+          name: p.name,
+          seatIndex: p.seatIndex,
+          team: (p.seatIndex % 2 === 0 ? 'A' : 'B') as Team,
+          connected: false,
+          avatar: p.avatar,
+        }));
+
+        let engine: GameEngine | null = null;
+        if (dbRoom.gameState && dbRoom.status === 'playing') {
+          try {
+            engine = GameEngine.fromState(dbRoom.gameState as unknown as GameState);
+          } catch (err) {
+            console.error(`[RoomManager] Failed to restore game engine for ${dbRoom.code}:`, err);
+          }
+        }
+
+        const room: Room = {
+          code: dbRoom.code,
+          players,
+          engine,
+          lockedPlayerIds: dbRoom.lockedPlayerIds || [],
+          playerSocketMap: new Map(),
+          socketPlayerMap: new Map(),
+          createdAt: dbRoom.createdAt.getTime(),
+        };
+
+        this.rooms.set(dbRoom.code, room);
+      }
+      console.log(`[RoomManager] Restored ${dbRooms.length} rooms from DB`);
+    } catch (err) {
+      console.error('[RoomManager] Failed to restore rooms:', err);
+    }
+  }
+
+  createRoom(socketId: string, googleId: string, playerName: string, avatar: number): Room {
     let code: string;
     do {
       code = generateRoomCode();
@@ -31,6 +108,7 @@ export class RoomManager {
 
     const player: Player = {
       id: socketId,
+      googleId,
       name: playerName,
       seatIndex: 0,
       team: 'A',
@@ -42,6 +120,7 @@ export class RoomManager {
       code,
       players: [player],
       engine: null,
+      lockedPlayerIds: [],
       playerSocketMap: new Map([[0, socketId]]),
       socketPlayerMap: new Map([[socketId, 0]]),
       createdAt: Date.now(),
@@ -49,6 +128,7 @@ export class RoomManager {
 
     this.rooms.set(code, room);
     this.playerRoomMap.set(socketId, code);
+    this.persistRoom(room);
 
     return room;
   }
@@ -56,6 +136,7 @@ export class RoomManager {
   joinRoom(
     roomCode: string,
     socketId: string,
+    googleId: string,
     playerName: string,
     avatar: number
   ): { room: Room; seatIndex: number } | { error: string } {
@@ -63,11 +144,27 @@ export class RoomManager {
     if (!room) {
       return { error: 'Room not found' };
     }
+
+    // If game is in progress, only locked players can rejoin
+    if (room.engine && room.engine.getPhase() !== 'waiting') {
+      return this.handleReconnect(roomCode, googleId, socketId);
+    }
+
+    // Check if this user is already in the room
+    const existingPlayer = room.players.find(p => p.googleId === googleId);
+    if (existingPlayer) {
+      // Reconnect existing player
+      existingPlayer.id = socketId;
+      existingPlayer.connected = true;
+      room.playerSocketMap.set(existingPlayer.seatIndex, socketId);
+      room.socketPlayerMap.set(socketId, existingPlayer.seatIndex);
+      this.playerRoomMap.set(socketId, roomCode);
+      this.persistRoom(room);
+      return { room, seatIndex: existingPlayer.seatIndex };
+    }
+
     if (room.players.length >= 4) {
       return { error: 'Room is full' };
-    }
-    if (room.engine && room.engine.getPhase() !== 'waiting') {
-      return { error: 'Game already in progress' };
     }
 
     const seatIndex = room.players.length;
@@ -75,6 +172,7 @@ export class RoomManager {
 
     const player: Player = {
       id: socketId,
+      googleId,
       name: playerName,
       seatIndex,
       team,
@@ -86,6 +184,7 @@ export class RoomManager {
     room.playerSocketMap.set(seatIndex, socketId);
     room.socketPlayerMap.set(socketId, seatIndex);
     this.playerRoomMap.set(socketId, roomCode);
+    this.persistRoom(room);
 
     return { room, seatIndex };
   }
@@ -103,6 +202,10 @@ export class RoomManager {
     engine.startRound();
     room.engine = engine;
 
+    // Lock room to current players
+    room.lockedPlayerIds = room.players.map(p => p.googleId);
+
+    this.persistRoom(room);
     return engine;
   }
 
@@ -124,6 +227,31 @@ export class RoomManager {
     const room = this.getRoomBySocket(socketId);
     if (!room) return undefined;
     return room.socketPlayerMap.get(socketId);
+  }
+
+  // Get rooms a user has participated in (for history)
+  async getRoomHistory(googleId: string): Promise<any[]> {
+    if (!isDBConnected()) return [];
+    try {
+      const rooms = await RoomModel.find({
+        'players.googleId': googleId,
+        status: { $in: ['waiting', 'playing'] },
+      })
+        .sort({ updatedAt: -1 })
+        .limit(10)
+        .lean();
+
+      return rooms.map(r => ({
+        roomCode: r.code,
+        status: r.status,
+        players: r.players.map(p => ({ name: p.name, googleId: p.googleId, seatIndex: p.seatIndex })),
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      }));
+    } catch (err) {
+      console.error('[RoomManager] Failed to get room history:', err);
+      return [];
+    }
   }
 
   handleDisconnect(socketId: string): { room: Room; seatIndex: number } | null {
@@ -150,15 +278,17 @@ export class RoomManager {
       const connectedCount = room.players.filter(p => p.connected).length;
       if (connectedCount === 0) {
         this.rooms.delete(roomCode);
+        this.markRoomFinished(roomCode);
       }
     }
 
+    this.persistRoom(room);
     return { room, seatIndex };
   }
 
   handleReconnect(
     roomCode: string,
-    playerId: string,
+    googleId: string,
     newSocketId: string
   ): { room: Room; seatIndex: number } | { error: string } {
     const room = this.rooms.get(roomCode);
@@ -166,9 +296,13 @@ export class RoomManager {
       return { error: 'Room not found' };
     }
 
-    // Find player by original ID
-    const playerIndex = room.players.findIndex(p => p.id === playerId || p.name === playerId);
+    // Find player by googleId
+    const playerIndex = room.players.findIndex(p => p.googleId === googleId);
     if (playerIndex === -1) {
+      // If game is in progress, only locked players can rejoin
+      if (room.lockedPlayerIds.length > 0 && !room.lockedPlayerIds.includes(googleId)) {
+        return { error: 'Game in progress. Only original players can rejoin.' };
+      }
       return { error: 'Player not found in room' };
     }
 
@@ -185,7 +319,28 @@ export class RoomManager {
       room.engine.updatePlayerConnection(seatIndex, true);
     }
 
+    this.persistRoom(room);
     return { room, seatIndex };
+  }
+
+  // Persist game state after each move
+  persistGameState(roomCode: string): void {
+    const room = this.rooms.get(roomCode);
+    if (room) {
+      this.persistRoom(room);
+    }
+  }
+
+  private async markRoomFinished(roomCode: string): Promise<void> {
+    if (!isDBConnected()) return;
+    try {
+      await RoomModel.findOneAndUpdate(
+        { code: roomCode },
+        { status: 'finished', updatedAt: new Date() }
+      );
+    } catch (err) {
+      console.error('[RoomManager] Failed to mark room finished:', err);
+    }
   }
 
   cleanupStaleRooms(maxAgeMs: number = 3600000): void {
@@ -197,6 +352,7 @@ export class RoomManager {
           this.playerRoomMap.delete(socketId);
         }
         this.rooms.delete(code);
+        this.markRoomFinished(code);
       }
     }
   }

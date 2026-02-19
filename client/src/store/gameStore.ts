@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type {
   Player, Card, TrickCard, TeamCards, TeamScore,
-  GamePhase, ClientGameState, Suit,
+  GamePhase, ClientGameState, Suit, RoomHistoryEntry,
 } from '@shared/types';
 
 export type Screen = 'home' | 'lobby' | 'game';
@@ -43,6 +43,7 @@ interface GameStore {
   notifications: Notification[];
   animatingTrick: boolean;
   lastPlayedCard: { playerIndex: number; card: Card } | null;
+  roomHistory: RoomHistoryEntry[];
 
   // Actions
   setScreen: (screen: Screen) => void;
@@ -57,6 +58,7 @@ interface GameStore {
   addNotification: (message: string, type?: 'info' | 'success' | 'warning') => void;
   removeNotification: (id: string) => void;
   playCardFromHand: (cardId: string) => void;
+  setRoomHistory: (rooms: RoomHistoryEntry[]) => void;
   reset: () => void;
 }
 
@@ -95,6 +97,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   notifications: [],
   animatingTrick: false,
   lastPlayedCard: null,
+  roomHistory: [],
 
   // Actions
   setScreen: (screen) => set({ screen }),
@@ -145,6 +148,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     myHand: state.myHand.filter((c) => c.id !== cardId),
   })),
 
+  setRoomHistory: (rooms) => set({ roomHistory: rooms }),
+
   reset: () => set({
     screen: 'home',
     roomCode: null,
@@ -152,5 +157,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     notifications: [],
     animatingTrick: false,
     lastPlayedCard: null,
+    roomHistory: [],
   }),
 }));

@@ -1,20 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
+import { useAuthStore } from '@/store/authStore';
 import { AVATARS } from '@/lib/cards';
 
 interface LobbyProps {
   onCreateRoom: (name: string, avatar: number) => void;
   onJoinRoom: (code: string, name: string, avatar: number) => void;
   onStartGame: () => void;
+  onReconnectRoom: (roomCode: string) => void;
+  onRequestHistory: () => void;
 }
 
-export function Lobby({ onCreateRoom, onJoinRoom, onStartGame }: LobbyProps) {
-  const { screen, roomCode, players, mySeatIndex } = useGameStore();
-  const [name, setName] = useState('');
+export function Lobby({ onCreateRoom, onJoinRoom, onStartGame, onReconnectRoom, onRequestHistory }: LobbyProps) {
+  const { screen, roomCode, players, mySeatIndex, roomHistory } = useGameStore();
+  const authUser = useAuthStore((s) => s.user);
+  const [name, setName] = useState(authUser?.name || '');
   const [code, setCode] = useState('');
-  const [avatar, setAvatar] = useState(0);
+  const [avatar, setAvatar] = useState(authUser?.avatar || 0);
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (authUser?.name && !name) setName(authUser.name);
+  }, [authUser]);
 
   const isHost = mySeatIndex === 0;
   const canStart = players.length === 4;
@@ -34,7 +43,19 @@ export function Lobby({ onCreateRoom, onJoinRoom, onStartGame }: LobbyProps) {
               {roomCode}
             </span>
           </div>
-          <p className="text-white/40 text-xs">Share this code with your friends</p>
+          <p className="text-white/40 text-xs">Share this code or link with your friends</p>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}?room=${roomCode}`;
+              navigator.clipboard.writeText(url).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+            className="text-xs text-gold/80 hover:text-gold underline transition-colors"
+          >
+            {copied ? 'Link copied!' : 'Copy invite link'}
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -144,6 +165,45 @@ export function Lobby({ onCreateRoom, onJoinRoom, onStartGame }: LobbyProps) {
           <button onClick={() => setMode('join')} className="btn-secondary w-full text-lg">
             Join Room
           </button>
+
+          {roomHistory.length > 0 && (
+            <div className="pt-3 border-t border-white/10">
+              <div className="text-white/50 text-xs mb-2">Your Recent Rooms</div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {roomHistory.map((room) => (
+                  <button
+                    key={room.roomCode}
+                    onClick={() => onReconnectRoom(room.roomCode)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                  >
+                    <div>
+                      <span className="font-mono text-sm text-white tracking-wider">{room.roomCode}</span>
+                      <span className={`ml-2 text-[0.6rem] px-1.5 py-0.5 rounded ${
+                        room.status === 'playing' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {room.status}
+                      </span>
+                    </div>
+                    <div className="text-white/30 text-xs">
+                      {room.players.length}/4
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {authUser && (
+            <div className="pt-2 text-center">
+              <span className="text-white/30 text-xs">Signed in as {authUser.name}</span>
+              <button
+                onClick={() => useAuthStore.getState().logout()}
+                className="ml-2 text-white/40 hover:text-white/60 text-xs underline"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
 

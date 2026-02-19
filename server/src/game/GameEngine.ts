@@ -361,4 +361,14 @@ export class GameEngine {
     this.state.dealerIndex = 0;
     this.state.phase = 'waiting';
   }
+
+  getSerializableState(): GameState {
+    return JSON.parse(JSON.stringify(this.state));
+  }
+
+  static fromState(savedState: GameState): GameEngine {
+    const engine = new GameEngine(savedState.players, savedState.matchTarget);
+    Object.assign(engine.state, savedState);
+    return engine;
+  }
 }

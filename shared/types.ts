@@ -23,6 +23,7 @@ export interface Card {
 
 export interface Player {
   id: string;
+  googleId: string;
   name: string;
   seatIndex: number;
   team: Team;
@@ -143,6 +144,32 @@ export interface ReconnectedPayload {
   gameState: ClientGameState | null;
 }
 
+// Auth types
+export interface AuthUser {
+  googleId: string;
+  name: string;
+  email: string;
+  avatar: number;
+  picture?: string;
+}
+
+export interface RoomHistoryEntry {
+  roomCode: string;
+  status: 'waiting' | 'playing' | 'finished';
+  players: { name: string; googleId: string; seatIndex: number }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoomHistoryPayload {
+  rooms: RoomHistoryEntry[];
+}
+
+export interface AuthPayload {
+  token: string;
+  user: AuthUser;
+}
+
 // Socket event maps
 export interface ServerToClientEvents {
   'room:created': (data: RoomCreatedPayload) => void;
@@ -157,6 +184,7 @@ export interface ServerToClientEvents {
   'game:matchEnd': (data: MatchEndPayload) => void;
   'game:error': (data: ErrorPayload) => void;
   'player:reconnected': (data: ReconnectedPayload) => void;
+  'room:history': (data: RoomHistoryPayload) => void;
 }
 
 export interface ClientToServerEvents {
@@ -166,4 +194,5 @@ export interface ClientToServerEvents {
   'game:playCard': (data: { cardId: string }) => void;
   'game:newRound': () => void;
   'room:reconnect': (data: { roomCode: string; playerId: string }) => void;
+  'room:history': () => void;
 }

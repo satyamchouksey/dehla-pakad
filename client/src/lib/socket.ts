@@ -3,10 +3,14 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@shared/types';
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL
+export const SERVER_URL = import.meta.env.VITE_SERVER_URL
   || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
 
 let socket: GameSocket | null = null;
+
+function getAuthToken(): string | null {
+  return localStorage.getItem('dp_token');
+}
 
 export function getSocket(): GameSocket {
   if (!socket) {
@@ -17,6 +21,9 @@ export function getSocket(): GameSocket {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 10000,
+      auth: {
+        token: getAuthToken(),
+      },
     });
   }
   return socket;
@@ -24,6 +31,8 @@ export function getSocket(): GameSocket {
 
 export function connectSocket(): GameSocket {
   const s = getSocket();
+  // Update auth token before connecting
+  s.auth = { token: getAuthToken() };
   if (!s.connected) {
     console.log('[Socket] Connecting to', SERVER_URL);
     s.connect();
@@ -37,4 +46,8 @@ export function disconnectSocket(): void {
     socket.disconnect();
     socket = null;
   }
+}
+
+export function resetSocket(): void {
+  disconnectSocket();
 }
