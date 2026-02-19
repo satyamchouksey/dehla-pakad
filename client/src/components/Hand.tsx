@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card, Suit } from '@shared/types';
 import { PlayingCard } from './PlayingCard';
@@ -13,6 +13,8 @@ interface HandProps {
 
 function HandInner({ cards, isMyTurn, leadSuit, trumpSuit, onPlayCard }: HandProps) {
   const [scale, setScale] = useState(1);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const playedRef = useRef<Set<string>>(new Set());
 
   const canPlayCard = useCallback(
     (card: Card): boolean => {
@@ -44,6 +46,13 @@ function HandInner({ cards, isMyTurn, leadSuit, trumpSuit, onPlayCard }: HandPro
     return () => window.removeEventListener('resize', updateScale);
   }, [cards.length, overlap]);
 
+  // Reset played ref when cards change
+  useEffect(() => {
+    playedRef.current.clear();
+  }, [cards.length]);
+
+  const DRAG_THRESHOLD = -60;
+
   const containerHeight = Math.max(5, 6.5 * scale);
 
   return (
@@ -65,21 +74,35 @@ function HandInner({ cards, isMyTurn, leadSuit, trumpSuit, onPlayCard }: HandPro
               <motion.div
                 key={card.id}
                 layout
+                drag={playable ? 'y' : false}
+                dragConstraints={{ top: -120, bottom: 0 }}
+                dragElastic={0.3}
+                dragSnapToOrigin
+                onDragStart={() => setDraggingId(card.id)}
+                onDragEnd={(_e, info) => {
+                  setDraggingId(null);
+                  if (playable && info.offset.y < DRAG_THRESHOLD && !playedRef.current.has(card.id)) {
+                    playedRef.current.add(card.id);
+                    onPlayCard(card.id);
+                  }
+                }}
                 initial={{ opacity: 0, y: 60, rotate: -15, scale: 0.6 }}
                 animate={{
                   opacity: 1,
                   y: 0,
                   rotate: angle,
-                  scale: 1,
+                  scale: draggingId === card.id ? 1.1 : 1,
                 }}
                 exit={{ opacity: 0, y: -80, scale: 0.5, transition: { duration: 0.3 } }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25, delay: i * 0.03 }}
                 style={{
                   marginLeft: i === 0 ? 0 : overlap,
                   transformOrigin: 'bottom center',
-                  zIndex: i,
+                  zIndex: draggingId === card.id ? 50 : i,
+                  cursor: playable ? 'grab' : 'default',
                 }}
-                className="relative"
+                className="relative touch-none"
+                whileDrag={{ scale: 1.12, zIndex: 50 }}
               >
                 <PlayingCard
                   card={card}

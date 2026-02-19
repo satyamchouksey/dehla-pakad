@@ -66,7 +66,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             compact
           />
           <div className="ml-auto flex items-center gap-1.5">
-            {trumpSuit && (
+            {trumpSuit && phase === 'playing' && (
               <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30">
                 <span className="text-[0.5rem] text-purple-300">T</span>
                 <span className={`text-sm ${trumpSuit === 'hearts' || trumpSuit === 'diamonds' ? 'text-red-500' : 'text-white'}`}>
@@ -76,34 +76,39 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             )}
             <VoiceChat compact />
             {phase === 'playing' && (
-              <div className={`px-2.5 py-1.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap flex-shrink-0
-                ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'bg-black/40 text-white/70 border border-white/10'}
+              <div className={`px-2.5 py-1.5 rounded-full text-[0.7rem] font-bold whitespace-nowrap flex-shrink-0
+                ${isMyTurn
+                  ? 'bg-gold/30 text-gold border border-gold/50 shadow-[0_0_12px_rgba(218,165,32,0.3)] animate-pulse'
+                  : 'bg-black/40 text-white/70 border border-white/10'}
               `}>
-                {isMyTurn ? "Your Turn" : `${(players[currentPlayerIndex]?.name || '').split(' ')[0]}'s Turn`}
+                {isMyTurn ? "🎯 YOUR TURN" : `${(players[currentPlayerIndex]?.name || '').split(' ')[0]}'s Turn`}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Desktop: turn indicator centered */}
+      {/* Desktop: turn indicator centered - BIG and prominent */}
       <AnimatePresence>
         {phase === 'playing' && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`hidden lg:block absolute top-2 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full text-sm font-semibold
-              ${isMyTurn ? 'bg-gold/30 text-gold border border-gold/40' : 'glass text-white/70'}
+            initial={{ opacity: 0, y: -30, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.8 }}
+            className={`hidden lg:block absolute top-3 left-1/2 -translate-x-1/2 z-20 px-6 py-2.5 rounded-full font-bold
+              ${isMyTurn
+                ? 'bg-gold/30 text-gold border-2 border-gold/50 text-lg shadow-[0_0_20px_rgba(218,165,32,0.3)]'
+                : 'glass text-white/70 text-base border border-white/10'}
             `}
           >
-            {isMyTurn ? "Your Turn" : `${players[currentPlayerIndex]?.name}'s Turn`}
+            {isMyTurn ? "🎯 YOUR TURN" : `${players[currentPlayerIndex]?.name}'s Turn`}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Desktop: scoreboard top right */}
-      <div className="absolute top-2 right-2 z-20 hidden lg:block">
+      {/* Desktop: scoreboard + voice chat top right */}
+      <div className="absolute top-2 right-2 z-20 hidden lg:flex items-start gap-2">
+        <VoiceChat compact />
         <ScoreBoard
           matchScores={matchScores}
           tricksWon={tricksWon}
@@ -116,8 +121,8 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
         />
       </div>
 
-      {/* Trump suit indicator - top left */}
-      {trumpSuit && (
+      {/* Trump suit indicator - top left (only during active play) */}
+      {trumpSuit && phase === 'playing' && (
         <div className="absolute top-2 left-2 z-20 hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full glass border border-purple-500/30">
           <span className="text-xs text-white/50">Trump</span>
           <span className={`text-lg ${trumpSuit === 'hearts' || trumpSuit === 'diamonds' ? 'text-red-500' : 'text-white'}`}>
