@@ -22,17 +22,17 @@ function HandInner({ cards, isMyTurn, leadSuit, onPlayCard }: HandProps) {
     [isMyTurn, leadSuit, cards]
   );
 
-  const fanAngle = Math.min(3, 40 / Math.max(cards.length, 1));
+  const fanAngle = Math.min(2.5, 30 / Math.max(cards.length, 1));
   const startAngle = -((cards.length - 1) * fanAngle) / 2;
 
   return (
-    <div className="flex justify-center items-end relative" style={{ minHeight: '7rem' }}>
+    <div className="flex justify-center items-end relative" style={{ minHeight: '6.5rem' }}>
       <div className="flex items-end justify-center relative">
         <AnimatePresence mode="popLayout">
           {cards.map((card, i) => {
             const angle = startAngle + i * fanAngle;
             const playable = canPlayCard(card);
-            const overlap = Math.max(-24, -60 + cards.length * 2);
+            const overlap = Math.max(-28, -56 + cards.length * 2);
 
             return (
               <motion.div

@@ -11,22 +11,22 @@ interface TrickAreaProps {
 }
 
 const POSITION_STYLES: Record<string, { x: number; y: number }> = {
-  bottom: { x: 0, y: 40 },
-  left: { x: -75, y: 0 },
-  top: { x: 0, y: -40 },
-  right: { x: 75, y: 0 },
+  bottom: { x: 0, y: 32 },
+  left: { x: -50, y: 0 },
+  top: { x: 0, y: -32 },
+  right: { x: 50, y: 0 },
 };
 
 const ENTRY_FROM: Record<string, { x: number; y: number }> = {
-  bottom: { x: 0, y: 140 },
-  left: { x: -160, y: 0 },
-  top: { x: 0, y: -140 },
-  right: { x: 160, y: 0 },
+  bottom: { x: 0, y: 120 },
+  left: { x: -120, y: 0 },
+  top: { x: 0, y: -120 },
+  right: { x: 120, y: 0 },
 };
 
 function TrickAreaInner({ trick, mySeatIndex, animating }: TrickAreaProps) {
   return (
-    <div className="relative w-56 h-44 sm:w-72 sm:h-52 flex items-center justify-center">
+    <div className="relative w-40 h-36 sm:w-64 sm:h-48 flex items-center justify-center">
       <AnimatePresence>
         {trick.map((tc, i) => {
           const pos = getRelativeSeatPosition(mySeatIndex, tc.playerIndex);
@@ -54,7 +54,7 @@ function TrickAreaInner({ trick, mySeatIndex, animating }: TrickAreaProps) {
       </AnimatePresence>
 
       {trick.length === 0 && (
-        <div className="text-white/15 text-sm font-medium select-none">
+        <div className="text-white/15 text-xs sm:text-sm font-medium select-none">
           Play a card
         </div>
       )}

@@ -86,9 +86,9 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
       </div>
 
       {/* Game layout */}
-      <div className="flex-1 flex flex-col items-center justify-between py-12 sm:py-14 px-2 sm:px-4">
+      <div className="flex-1 flex flex-col items-center justify-between pt-10 pb-2 sm:py-12 px-1 sm:px-4 min-h-0">
         {/* Top player */}
-        <div className="flex justify-center">
+        <div className="flex justify-center flex-shrink-0">
           <PlayerSeat
             player={players[topPlayer]}
             isCurrentTurn={currentPlayerIndex === topPlayer}
@@ -100,8 +100,8 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
         </div>
 
         {/* Middle row: left player - trick area - right player */}
-        <div className="flex items-center justify-between w-full max-w-3xl">
-          <div className="flex-shrink-0">
+        <div className="flex items-center justify-between w-full max-w-3xl flex-shrink-0 px-1">
+          <div className="flex-shrink-0 w-20 sm:w-auto">
             <PlayerSeat
               player={players[leftPlayer]}
               isCurrentTurn={currentPlayerIndex === leftPlayer}
@@ -112,7 +112,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             />
           </div>
 
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-center min-w-0">
             <TrickArea
               trick={currentTrick}
               mySeatIndex={mySeatIndex}
@@ -120,7 +120,7 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
             />
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 w-20 sm:w-auto">
             <PlayerSeat
               player={players[rightPlayer]}
               isCurrentTurn={currentPlayerIndex === rightPlayer}
@@ -133,9 +133,9 @@ export function GameBoard({ onPlayCard, onNewRound }: GameBoardProps) {
         </div>
 
         {/* Bottom: my hand */}
-        <div className="w-full max-w-3xl">
-          <div className="text-center mb-1">
-            <span className="text-[0.65rem] sm:text-xs text-white/30">
+        <div className="w-full max-w-3xl flex-shrink-0">
+          <div className="text-center mb-0.5">
+            <span className="text-[0.6rem] sm:text-xs text-white/30">
               {players[mySeatIndex]?.name} (Team {myTeam})
               {dealerIndex === mySeatIndex ? ' • Dealer' : ''}
             </span>

@@ -36,27 +36,27 @@
   }
 
   .glass {
-    @apply bg-black/20 backdrop-blur-md border border-white/10 rounded-xl;
+    @apply bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl;
   }
 
   .glass-dark {
-    @apply bg-black/40 backdrop-blur-md border border-white/10 rounded-xl;
+    @apply bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl;
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-gold text-felt-dark font-bold rounded-lg 
+    @apply px-6 py-3 bg-gold text-felt-dark font-bold rounded-xl 
            hover:bg-gold-light active:bg-gold-dark transition-all duration-200
            shadow-lg hover:shadow-glow focus:outline-none focus:ring-2 focus:ring-gold/50;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-white/10 text-white font-semibold rounded-lg border border-white/20
+    @apply px-6 py-3 bg-white/10 text-white font-semibold rounded-xl border border-white/20
            hover:bg-white/20 active:bg-white/5 transition-all duration-200
            focus:outline-none focus:ring-2 focus:ring-white/30;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white
+    @apply w-full px-4 py-3 bg-black/30 border border-white/20 rounded-xl text-white
            placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-gold/50
            focus:border-gold/50 transition-all duration-200;
   }

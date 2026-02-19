@@ -145,6 +145,11 @@ export class GameEngine {
     // Add to current trick
     this.state.currentTrick.push({ card, playerIndex });
 
+    // Trump opens when a player can't follow suit and plays a different suit
+    if (this.state.leadSuit && card.suit !== this.state.leadSuit && !this.state.trumpSuit) {
+      this.state.trumpSuit = card.suit;
+    }
+
     // Check if trick is complete (4 cards played)
     if (this.state.currentTrick.length === 4) {
       return this.resolveTrick();
