@@ -1,0 +1,24 @@
+{
+  "name": "Dehla Pakad - Card Game",
+  "short_name": "Dehla Pakad",
+  "description": "Play the classic Indian card game Dehla Pakad with friends online!",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a2a12",
+  "theme_color": "#0a2a12",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
