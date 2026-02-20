@@ -11,14 +11,23 @@ import { UserModel } from './models/User';
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 const app = express();
-app.use(cors());
+
+// Parse CLIENT_URL (supports comma-separated origins, e.g. "https://app.pages.dev,http://localhost:5173")
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+  : null;
+
+app.use(cors({
+  origin: allowedOrigins || '*',
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json());
 
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: allowedOrigins || '*',
     methods: ['GET', 'POST'],
   },
   pingInterval: 10000,

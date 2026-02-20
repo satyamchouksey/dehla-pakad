@@ -2,8 +2,7 @@ import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL
-  || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 export function Login() {
   const { setAuth, setLoading } = useAuthStore();

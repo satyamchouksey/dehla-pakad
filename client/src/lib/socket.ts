@@ -3,8 +3,7 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@shared/types';
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-export const SERVER_URL = import.meta.env.VITE_SERVER_URL
-  || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
+export const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 let socket: GameSocket | null = null;
 
