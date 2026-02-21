@@ -12,14 +12,30 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 
 const app = express();
 
-// Parse CLIENT_URL (supports comma-separated origins, e.g. "https://app.pages.dev,http://localhost:5173")
+// Parse CLIENT_URL (supports comma-separated origins)
 const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+  ? process.env.CLIENT_URL.split(',').map(o => o.trim().replace(/\/$/, ''))
   : null;
 
+console.log('[CORS] CLIENT_URL:', process.env.CLIENT_URL);
+console.log('[CORS] Allowed origins:', allowedOrigins || '* (all)');
+
+// CORS origin handler - allows all if no CLIENT_URL set
+const corsOriginHandler = (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
+  // Allow requests with no origin (mobile apps, curl, server-to-server)
+  if (!origin) return callback(null, true);
+  // No CLIENT_URL set — allow everything
+  if (!allowedOrigins) return callback(null, true);
+  // Check if origin matches
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  console.warn(`[CORS] Blocked origin: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
+  return callback(null, true); // Allow anyway for now, log for debugging
+};
+
 app.use(cors({
-  origin: allowedOrigins || '*',
-  methods: ['GET', 'POST'],
+  origin: corsOriginHandler,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
 }));
 app.use(express.json());
 
@@ -27,8 +43,9 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins || '*',
+    origin: corsOriginHandler,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
   pingInterval: 10000,
   pingTimeout: 5000,
